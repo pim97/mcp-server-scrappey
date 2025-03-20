@@ -1,0 +1,21 @@
+{
+  "name": "scrappey-mcp",
+  "version": "1.0.0",
+  "description": "MCP server implementation for Scrappey",
+  "main": "scrappey-mcp.ts",
+  "type": "module",
+  "scripts": {
+    "start": "ts-node scrappey-mcp.ts",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.7.0",
+    "axios": "^1.6.7",
+    "dotenv": "^16.4.7",
+    "typescript": "^5.3.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.24",
+    "ts-node": "^10.9.2"
+  }
+}
