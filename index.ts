@@ -27,14 +27,12 @@ Object.entries(requiredEnvVars).forEach(([name, value]) => {
   if (!value) throw new Error(`${name} environment variable is required`);
 });
 
-// Global State
-const sessions = new Map<string, string>();
 const consoleLogs: string[] = [];
 const screenshots = new Map<string, string>();
 
 // Scrappey API Configuration
-// const SCRAPPEY_API_URL = "https://publisher.scrappey.com/api/v1";
-const SCRAPPEY_API_URL = "http://localhost:80/v1";
+const SCRAPPEY_API_URL = "https://publisher.scrappey.com/api/v1";
+// const SCRAPPEY_API_URL = "http://localhost:80/v1";
 
 // Helper Functions
 async function makeRequest(cmd: string, params: any) {
@@ -68,130 +66,72 @@ async function destroySession(sessionId: string) {
 const TOOLS: Tool[] = [
   {
     name: "scrappey_create_session",
-    description: "Create a new browser session using Scrappey",
+    description: "Create a new browser session in Scrappey",
     inputSchema: {
       type: "object",
       properties: {
-        proxy: { type: "string", description: "Optional proxy URL" },
+        proxy: { type: "string" },
         whitelistedDomains: { 
-          type: "array", 
-          items: { type: "string" },
-          description: "Optional list of whitelisted domains"
+          type: "array",
+          items: { type: "string" }
         },
-        browser: {
-          type: "object",
-          properties: {
-            name: { type: "string", enum: ["chrome", "firefox", "safari"] },
-            minVersion: { type: "number" },
-            maxVersion: { type: "number" }
+        datacenter: { type: "boolean" }
+      }
+    }
+  },
+  {
+    name: "scrappey_destroy_session",
+    description: "Destroy an existing browser session in Scrappey",
+    inputSchema: {
+      type: "object",
+      properties: {
+        session: { type: "string" }
+      },
+      required: ["session"]
+    }
+  },
+  {
+    name: "scrappey_request",
+    description: "Send a request using Scrappey",
+    inputSchema: {
+      type: "object",
+      properties: {
+        method: { type: "string", enum: ["GET", "POST", "PUT", "DELETE", "PATCH"] },
+        url: { type: "string" },
+        session: { type: "string" },
+        postData: { type: "string" },
+        customHeaders: { type: "object" }
+      },
+      required: ["method", "url"]
+    }
+  },
+  {
+    name: "scrappey_browser_action",
+    description: "Execute browser actions in a session",
+    inputSchema: {
+      type: "object",
+      properties: {
+        session: { type: "string" },
+        actions: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              cmd: { type: "string" },
+              cssSelector: { type: "string" },
+              text: { type: "string" },
+              code: { type: "string" },
+              wait: { type: "number" },
+              url: { type: "string" },
+              when: { type: "string", enum: ["beforeload", "afterload"] }
+            },
+            required: ["cmd"]
           }
         }
       },
-      required: [],
-    },
-  },
-  {
-    name: "scrappey_close_session",
-    description: "Close a browser session on Scrappey",
-    inputSchema: {
-      type: "object",
-      properties: {
-        sessionId: { type: "string" },
-      },
-      required: ["sessionId"],
-    },
-  },
-  {
-    name: "scrappey_navigate",
-    description: "Navigate to a URL using Scrappey",
-    inputSchema: {
-      type: "object",
-      properties: {
-        url: { type: "string" },
-        sessionId: { type: "string" },
-        customHeaders: { type: "object" },
-        cookies: { type: "string" },
-      },
-      required: ["url", "sessionId"],
-    },
-  },
-  {
-    name: "scrappey_click",
-    description: "Click an element on the page",
-    inputSchema: {
-      type: "object",
-      properties: {
-        sessionId: { type: "string" },
-        selector: { type: "string" },
-        wait: { type: "number" },
-        waitForSelector: { type: "string" },
-        when: { type: "string", enum: ["beforeload", "afterload"] },
-        ignoreErrors: { type: "boolean" },
-      },
-      required: ["sessionId", "selector"],
-    },
-  },
-  {
-    name: "scrappey_type",
-    description: "Type text into an input field",
-    inputSchema: {
-      type: "object",
-      properties: {
-        sessionId: { type: "string" },
-        selector: { type: "string" },
-        text: { type: "string" },
-        wait: { type: "number" },
-        when: { type: "string", enum: ["beforeload", "afterload"] },
-        ignoreErrors: { type: "boolean" },
-      },
-      required: ["sessionId", "selector", "text"],
-    },
-  },
-  {
-    name: "scrappey_execute_js",
-    description: "Execute JavaScript code on the page",
-    inputSchema: {
-      type: "object",
-      properties: {
-        sessionId: { type: "string" },
-        code: { type: "string" },
-      },
-      required: ["sessionId", "code"],
-    },
-  },
-  {
-    name: "scrappey_solve_captcha",
-    description: "Solve a captcha on the page",
-    inputSchema: {
-      type: "object",
-      properties: {
-        sessionId: { type: "string" },
-        captchaType: { 
-          type: "string", 
-          enum: ["turnstile", "perimeterx", "recaptcha", "hcaptcha", "mtcaptcha", "custom"]
-        },
-        sitekey: { type: "string" },
-        cssSelector: { type: "string" },
-        inputSelector: { type: "string" },
-        clickSelector: { type: "string" },
-      },
-      required: ["sessionId", "captchaType"],
-    },
-  },
-  {
-    name: "scrappey_wait",
-    description: "Wait for a specified time or selector",
-    inputSchema: {
-      type: "object",
-      properties: {
-        sessionId: { type: "string" },
-        seconds: { type: "number" },
-        selector: { type: "string" },
-        timeout: { type: "number" },
-      },
-      required: ["sessionId"],
-    },
-  },
+      required: ["session", "actions"]
+    }
+  }
 ];
 
 // Tool Handler Implementation
@@ -202,122 +142,45 @@ async function handleToolCall(
   try {
     switch (name) {
       case "scrappey_create_session": {
-        const sessionId = await createSession(args);
-        sessions.set(sessionId, sessionId);
+        const session = await createSession(args);
         return {
-          content: [{ type: "text", text: `Created session: ${sessionId}` }],
+          content: [{ type: "text", text: `Created session: ${session}` }],
           isError: false,
         };
       }
 
-      case "scrappey_close_session": {
-        await destroySession(args.sessionId);
-        sessions.delete(args.sessionId);
+      case "scrappey_destroy_session": {
+        await destroySession(args.session);
         return {
-          content: [{ type: "text", text: "Session closed successfully" }],
+          content: [{ type: "text", text: `Destroyed session: ${args.session}` }],
           isError: false,
         };
       }
 
-      case "scrappey_navigate": {
+      case "scrappey_request": {
+        const { method, url, session, postData, customHeaders } = args;
+        const cmd = `request.${method.toLowerCase()}`;
+        const params: any = { url };
+        
+        if (session) params.session = session;
+        if (postData) params.postData = postData;
+        if (customHeaders) params.customHeaders = customHeaders;
+
+        const response = await makeRequest(cmd, params);
+        return {
+          content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+          isError: false,
+        };
+      }
+
+      case "scrappey_browser_action": {
+        const { session, actions } = args;
         const response = await makeRequest("request.get", {
-          session: args.sessionId,
-          url: args.url,
-          customHeaders: args.customHeaders,
-          cookies: args.cookies,
+          session,
+          browserActions: actions
         });
         return {
-          content: [{ type: "text", text: `Navigated to ${args.url}` }],
-          isError: false,
-        };
-      }
-
-      case "scrappey_click": {
-        await makeRequest("request.get", {
-          session: args.sessionId,
-          browserActions: [{
-            type: "click",
-            cssSelector: args.selector,
-            wait: args.wait,
-            waitForSelector: args.waitForSelector,
-            when: args.when,
-            ignoreErrors: args.ignoreErrors,
-          }],
-        });
-        return {
-          content: [{ type: "text", text: `Clicked element: ${args.selector}` }],
-          isError: false,
-        };
-      }
-
-      case "scrappey_type": {
-        await makeRequest("request.get", {
-          session: args.sessionId,
-          browserActions: [{
-            type: "type",
-            cssSelector: args.selector,
-            text: args.text,
-            wait: args.wait,
-            when: args.when,
-            ignoreErrors: args.ignoreErrors,
-          }],
-        });
-        return {
-          content: [{ type: "text", text: `Typed text into ${args.selector}` }],
-          isError: false,
-        };
-      }
-
-      case "scrappey_execute_js": {
-        const response = await makeRequest("request.get", {
-          session: args.sessionId,
-          browserActions: [{
-            type: "execute_js",
-            code: args.code,
-          }],
-        });
-        return {
-          content: [{ type: "text", text: `Executed JavaScript: ${response.result || "success"}` }],
-          isError: false,
-        };
-      }
-
-      case "scrappey_solve_captcha": {
-        await makeRequest("request.get", {
-          session: args.sessionId,
-          browserActions: [{
-            type: "solve_captcha",
-            captcha: args.captchaType,
-            captchaData: {
-              sitekey: args.sitekey,
-              cssSelector: args.cssSelector,
-              inputSelector: args.inputSelector,
-              clickSelector: args.clickSelector,
-            },
-          }],
-        });
-        return {
-          content: [{ type: "text", text: "Solved captcha successfully" }],
-          isError: false,
-        };
-      }
-
-      case "scrappey_wait": {
-        const action = args.selector ? {
-          type: "wait_for_selector",
-          cssSelector: args.selector,
-          timeout: args.timeout,
-        } : {
-          type: "wait",
-          wait: args.seconds,
-        };
-
-        await makeRequest("request.get", {
-          session: args.sessionId,
-          browserActions: [action],
-        });
-        return {
-          content: [{ type: "text", text: "Wait completed" }],
+          content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
           isError: false,
         };
       }
