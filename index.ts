@@ -169,10 +169,9 @@ async function handleToolCall(
       }
 
       case "scrappey_request": {
-        const { url, cmd, session, postData, customHeaders, filter } = args;
-        const params: any = { url, filter, session, postData, customHeaders };
+        const { cmd } = args;
 
-        const response = await makeRequest(cmd, params);
+        const response = await makeRequest(cmd, args);
 
         const result = {
           markdown: "",
@@ -219,12 +218,8 @@ async function handleToolCall(
       }
 
       case "scrappey_browser_action": {
-        const { session, browserActions, filter } = args;
-        const response = await makeRequest("request.get", {
-          session,
-          browserActions,
-          filter
-        });
+        const { cmd } = args;
+        const response = await makeRequest(cmd, args);
 
         const result = {
           markdown: "",
