@@ -14,4 +14,4 @@ COPY . .
 RUN npm run build
 
 # Default command to run the built MCP server
-CMD ["node", "dist/index.js"]
+CMD ["node", "index.js"]
