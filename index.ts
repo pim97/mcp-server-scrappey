@@ -14,6 +14,10 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import axios from "axios";
 import { config } from "dotenv";
+import { NodeHtmlMarkdown } from "node-html-markdown";
+
+import { JSDOM } from 'jsdom';
+const { DOMParser } = new JSDOM().window;
 
 config();
 
@@ -30,8 +34,8 @@ Object.entries(requiredEnvVars).forEach(([name, value]) => {
 const activeSessions = new Set<string>();
 
 // Scrappey API Configuration
-const SCRAPPEY_API_URL = "https://publisher.scrappey.com/api/v1";
-// const SCRAPPEY_API_URL = "http://localhost:80/v1";
+ const SCRAPPEY_API_URL = "https://publisher.scrappey.com/api/v1";
+//const SCRAPPEY_API_URL = "http://localhost:80/v1";
 
 // Helper Functions
 async function makeRequest(cmd: string, params: any) {
@@ -44,6 +48,10 @@ async function makeRequest(cmd: string, params: any) {
       },
       {
         timeout: 180000, // 3 minutes timeout in milliseconds
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
       }
     );
     return response.data;
@@ -95,12 +103,14 @@ const TOOLS: Tool[] = [
       properties: {
         cmd: { type: "string", enum: ["request.get", "request.post", "request.put", "request.delete", "request.patch"] },
         url: { type: "string" },
-        filter: { type: "array", items: { type: "enum", enum: ["innerText", "userAgent", "statusCode", "cookies", "cookieString", "responseHeaders", "requestHeaders", "ipInfo"] }, description: "Filter the response to only include the specified fields to make the respone shorter and more efficient" },
+        // filter: { type: "array", items: { type: "enum", enum: ["response", "innerText", "includeLinks", "includeImages", "userAgent", "statusCode", "cookies", "cookieString", "responseHeaders", "requestHeaders", "ipInfo"] }, description: "Filter the response to only include the specified fields to make the respone shorter and more efficient. Response is full HTML, innerText is just the text. Only use repsonse when you need HTML elements." },
         session: { type: "string" },
+        // includeLinks: { type: "boolean", description: "Include all links in the response of the page" },
+        // includeImages: { type: "boolean", description: "Include all images in the response of the page" },
         postData: { type: "string" },
         customHeaders: { type: "object" }
       },
-      required: ["url", "cmd", "session", "filter"]
+      required: ["url", "cmd", "session"]
     }
   },
   {
@@ -111,7 +121,7 @@ const TOOLS: Tool[] = [
       properties: {
         session: { type: "string" },
         url: { type: "string" },
-        filter: { type: "array", items: { type: "enum", enum: ["innerText", "userAgent", "statusCode", "cookies", "cookieString", "responseHeaders", "requestHeaders", "ipInfo"] }, description: "Filter the response to only include the specified fields to make the respone shorter and more efficient" },
+        // filter: { type: "array", items: { type: "enum", enum: ["response", "innerText", "includeLinks", "includeImages", "userAgent", "statusCode", "cookies", "cookieString", "responseHeaders", "requestHeaders", "ipInfo"] }, description: "Filter the response to only include the specified fields to make the respone shorter and more efficient. Response is full HTML, innerText is just the text. Only use repsonse when you need HTML elements." },
         keepSamePage: { type: "boolean", description: "Keep the same page before performing the browser actions" },
         cmd: { type: "string", enum: ["request.get", "request.post", "request.put", "request.delete", "request.patch"] },
         browserActions: {
@@ -119,18 +129,18 @@ const TOOLS: Tool[] = [
           items: {
             type: "object",
             properties: {
-              type: { type: "string", enum: ["click", "hover", "type", "scroll", "wait"] },
-              cssSelector: { type: "string" },
-              text: { type: "string" },
-              code: { type: "string" },
-              wait: { type: "number" },
-              url: { type: "string" }
+              type: { type: "string", enum: ["click", "hover", "type", "scroll", "wait", "goto", "execute_js"] },
+              cssSelector: { type: "string", description: "CSS selector to use for the action, such as #id, .class, tag, etc. for click, type, hover, scroll, goto, execute_js" },
+              text: { type: "string", description: "Text to type, only used for type action" },
+              code: { type: "string", description: "Javascript code to execute, only used for execute_js action" },
+              wait: { type: "number", description: "Wait for the specified number of seconds before performing the next action" },
+              url: { type: "string", description: "URL to navigate to, only used for goto action" }
             },
             required: ["type"]
           }
-          }
-        },
-      required: ["session", "browserActions", "filter"]
+        }
+      },
+      required: ["session", "browserActions"]
     }
   }
 ];
@@ -163,8 +173,47 @@ async function handleToolCall(
         const params: any = { url, filter, session, postData, customHeaders };
 
         const response = await makeRequest(cmd, params);
+
+        const result = {
+          markdown: "",
+        }
+
+        if (response?.solution?.response) {
+          // Add CSS selectors as comments before converting to markdown
+          const dom = new DOMParser().parseFromString(response.solution.response, 'text/html');
+          
+          // Add selectors to links
+          dom.querySelectorAll('a').forEach(link => {
+            const selector = getCssSelector(link);
+            link.textContent = `${link.textContent} <!-- selector: ${selector} -->`;
+          });
+
+          // Add selectors to buttons
+          dom.querySelectorAll('button').forEach(button => {
+            const selector = getCssSelector(button);
+            button.textContent = `${button.textContent} <!-- selector: ${selector} -->`;
+          });
+
+          // Add selectors to input fields
+          dom.querySelectorAll('input').forEach(input => {
+            const selector = getCssSelector(input);
+            input.setAttribute('placeholder', `${input.getAttribute('placeholder') || ''} <!-- selector: ${selector} -->`);
+          });
+
+          const nhm = new NodeHtmlMarkdown(
+            {
+              keepDataImages: true,
+              // keepComments: true // Ensure HTML comments are preserved
+            },
+            /* customTransformers (optional) */ undefined,
+            /* customCodeBlockTranslators (optional) */ undefined
+          );
+          
+          result.markdown = nhm.translate(dom.documentElement.outerHTML);
+        }
+
         return {
-          content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+          content: [{ type: "text", text: JSON.stringify(result, null, 2) }], // Return markdown directly instead of JSON
           isError: false,
         };
       }
@@ -176,8 +225,47 @@ async function handleToolCall(
           browserActions,
           filter
         });
+
+        const result = {
+          markdown: "",
+        }
+
+        if (response?.solution?.response) {
+          // Add CSS selectors as comments before converting to markdown
+          const dom = new DOMParser().parseFromString(response.solution.response, 'text/html');
+          
+          // Add selectors to links
+          dom.querySelectorAll('a').forEach(link => {
+            const selector = getCssSelector(link);
+            link.textContent = `${link.textContent} <!-- selector: ${selector} -->`;
+          });
+
+          // Add selectors to buttons
+          dom.querySelectorAll('button').forEach(button => {
+            const selector = getCssSelector(button);
+            button.textContent = `${button.textContent} <!-- selector: ${selector} -->`;
+          });
+
+          // Add selectors to input fields
+          dom.querySelectorAll('input').forEach(input => {
+            const selector = getCssSelector(input);
+            input.setAttribute('placeholder', `${input.getAttribute('placeholder') || ''} <!-- selector: ${selector} -->`);
+          });
+
+          const nhm = new NodeHtmlMarkdown(
+            {
+              keepDataImages: true,
+              // keepComments: true // Ensure HTML comments are preserved
+            },
+            /* customTransformers (optional) */ undefined,
+            /* customCodeBlockTranslators (optional) */ undefined
+          );
+          
+          result.markdown = nhm.translate(dom.documentElement.outerHTML);
+        }
+
         return {
-          content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+          content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
           isError: false,
         };
       }
@@ -254,4 +342,25 @@ async function runServer() {
   await server.connect(transport);
 }
 
-runServer().catch(console.error); 
+runServer().catch(console.error);
+
+// Helper function to get a unique CSS selector for an element
+function getCssSelector(element: Element): string {
+  if (element.id) {
+    return `#${element.id}`;
+  }
+  
+  if (element.className) {
+    const classes = element.className.split(' ').filter(c => c);
+    if (classes.length > 0) {
+      return `.${classes.join('.')}`;
+    }
+  }
+  
+  let selector = element.tagName.toLowerCase();
+  if (element.hasAttribute('name')) {
+    selector += `[name="${element.getAttribute('name')}"]`;
+  }
+  
+  return selector;
+} 
