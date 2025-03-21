@@ -34,8 +34,8 @@ Object.entries(requiredEnvVars).forEach(([name, value]) => {
 const activeSessions = new Set<string>();
 
 // Scrappey API Configuration
- const SCRAPPEY_API_URL = "https://publisher.scrappey.com/api/v1";
-//const SCRAPPEY_API_URL = "http://localhost:80/v1";
+const SCRAPPEY_API_URL = "https://publisher.scrappey.com/api/v1";
+// const SCRAPPEY_API_URL = "http://localhost:80/v1";
 
 // Helper Functions
 async function makeRequest(cmd: string, params: any) {
@@ -56,7 +56,7 @@ async function makeRequest(cmd: string, params: any) {
     );
     return response.data;
   } catch (error) {
-    throw new Error(`Scrappey API error: ${(error as Error).message}`);
+    throw new Error(`Scrappey API error: ${(error as Error).message} ${JSON.stringify(error)}`);
   }
 }
 
@@ -140,7 +140,7 @@ const TOOLS: Tool[] = [
           }
         }
       },
-      required: ["session", "browserActions"]
+      required: ["session", "browserActions", "url", "cmd"]
     }
   }
 ];
