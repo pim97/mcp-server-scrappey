@@ -27,8 +27,7 @@ Object.entries(requiredEnvVars).forEach(([name, value]) => {
   if (!value) throw new Error(`${name} environment variable is required`);
 });
 
-const consoleLogs: string[] = [];
-const screenshots = new Map<string, string>();
+const activeSessions = new Set<string>();
 
 // Scrappey API Configuration
 const SCRAPPEY_API_URL = "https://publisher.scrappey.com/api/v1";
@@ -55,11 +54,14 @@ async function makeRequest(cmd: string, params: any) {
 
 async function createSession(params: any = {}) {
   const response = await makeRequest("sessions.create", params);
-  return response.session;
+  const sessionId = response.session;
+  activeSessions.add(sessionId);
+  return sessionId;
 }
 
 async function destroySession(sessionId: string) {
   await makeRequest("sessions.destroy", { session: sessionId });
+  activeSessions.delete(sessionId);
 }
 
 // Tool Definitions
@@ -70,12 +72,7 @@ const TOOLS: Tool[] = [
     inputSchema: {
       type: "object",
       properties: {
-        proxy: { type: "string" },
-        whitelistedDomains: { 
-          type: "array",
-          items: { type: "string" }
-        },
-        datacenter: { type: "boolean" }
+        proxy: { type: "string", description: "Use with http://user:pass@ip:port, keep blank to use in built proxy" }
       }
     }
   },
@@ -96,13 +93,13 @@ const TOOLS: Tool[] = [
     inputSchema: {
       type: "object",
       properties: {
-        method: { type: "string", enum: ["GET", "POST", "PUT", "DELETE", "PATCH"] },
+        cmd: { type: "string", enum: ["request.get", "request.post", "request.put", "request.delete", "request.patch"] },
         url: { type: "string" },
         session: { type: "string" },
         postData: { type: "string" },
         customHeaders: { type: "object" }
       },
-      required: ["method", "url"]
+      required: ["url", "cmd", "session"]
     }
   },
   {
@@ -112,24 +109,26 @@ const TOOLS: Tool[] = [
       type: "object",
       properties: {
         session: { type: "string" },
-        actions: {
+        url: { type: "string" },
+        keepSamePage: { type: "boolean", description: "Keep the same page before performing the browser actions" },
+        cmd: { type: "string", enum: ["request.get", "request.post", "request.put", "request.delete", "request.patch"] },
+        browserActions: {
           type: "array",
           items: {
             type: "object",
             properties: {
-              cmd: { type: "string" },
+              type: { type: "string", enum: ["click", "hover", "type", "scroll", "wait"] },
               cssSelector: { type: "string" },
               text: { type: "string" },
               code: { type: "string" },
               wait: { type: "number" },
-              url: { type: "string" },
-              when: { type: "string", enum: ["beforeload", "afterload"] }
+              url: { type: "string" }
             },
-            required: ["cmd"]
+            required: ["type"]
           }
         }
       },
-      required: ["session", "actions"]
+      required: ["session", "browserActions"]
     }
   }
 ];
@@ -158,8 +157,7 @@ async function handleToolCall(
       }
 
       case "scrappey_request": {
-        const { method, url, session, postData, customHeaders } = args;
-        const cmd = `request.${method.toLowerCase()}`;
+        const { url, cmd, session, postData, customHeaders } = args;
         const params: any = { url };
         
         if (session) params.session = session;
@@ -215,45 +213,25 @@ const server = new Server(
 
 // Request Handlers
 server.setRequestHandler(ListResourcesRequestSchema, async () => ({
-  resources: [
-    {
-      uri: "console://logs",
-      mimeType: "text/plain",
-      name: "Browser console logs",
-    },
-    ...Array.from(screenshots.keys()).map((name) => ({
-      uri: `screenshot://${name}`,
-      mimeType: "image/png",
-      name: `Screenshot: ${name}`,
-    })),
-  ],
+  resources: Array.from(activeSessions).map(sessionId => ({
+    uri: `session://${sessionId}`,
+    mimeType: "text/plain",
+    name: `Active Session: ${sessionId}`,
+  })),
 }));
 
 server.setRequestHandler(ReadResourceRequestSchema, async (request: any) => {
   const uri = request.params.uri.toString();
 
-  if (uri === "console://logs") {
-    return {
-      contents: [
-        {
-          uri,
-          mimeType: "text/plain",
-          text: consoleLogs.join("\n"),
-        },
-      ],
-    };
-  }
-
-  if (uri.startsWith("screenshot://")) {
-    const name = uri.split("://")[1];
-    const screenshot = screenshots.get(name);
-    if (screenshot) {
+  if (uri.startsWith("session://")) {
+    const sessionId = uri.split("://")[1];
+    if (activeSessions.has(sessionId)) {
       return {
         contents: [
           {
             uri,
-            mimeType: "image/png",
-            blob: screenshot,
+            mimeType: "text/plain",
+            text: `Active session ID: ${sessionId}`,
           },
         ],
       };
