@@ -1,0 +1,11 @@
+{
+    "mcpServers": {
+        "scrappey": {
+            "command": "node",
+            "args": ["C:/Users/your_user/Desktop/scrappey-mcp.js"],
+            "env": {
+                "SCRAPPEY_API_KEY": ""
+            }
+        }
+    }
+}
