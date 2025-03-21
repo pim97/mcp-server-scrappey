@@ -37,7 +37,7 @@ async function makeRequest(cmd, params) {
         return response.data;
     }
     catch (error) {
-        throw new Error(`Scrappey API error: ${error.message}`);
+        throw new Error(`Scrappey API error: ${error.message} ${JSON.stringify(error)}`);
     }
 }
 async function createSession(params = {}) {
@@ -118,7 +118,7 @@ const TOOLS = [
                     }
                 }
             },
-            required: ["session", "browserActions"]
+            required: ["session", "browserActions", "url", "cmd"]
         }
     }
 ];
