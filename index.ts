@@ -72,7 +72,7 @@ const TOOLS: Tool[] = [
     inputSchema: {
       type: "object",
       properties: {
-        proxy: { type: "string", description: "Use with http://user:pass@ip:port, keep blank to use in built proxy" }
+        proxy: { type: "string", description: "Use with http://user:pass@ip:port, keep blank to use in built proxy, which is fine for most use cases" }
       }
     }
   },
@@ -95,11 +95,12 @@ const TOOLS: Tool[] = [
       properties: {
         cmd: { type: "string", enum: ["request.get", "request.post", "request.put", "request.delete", "request.patch"] },
         url: { type: "string" },
+        filter: { type: "array", items: { type: "enum", enum: ["innerText", "userAgent", "statusCode", "cookies", "cookieString", "responseHeaders", "requestHeaders", "ipInfo"] }, description: "Filter the response to only include the specified fields to make the respone shorter and more efficient" },
         session: { type: "string" },
         postData: { type: "string" },
         customHeaders: { type: "object" }
       },
-      required: ["url", "cmd", "session"]
+      required: ["url", "cmd", "session", "filter"]
     }
   },
   {
@@ -110,6 +111,7 @@ const TOOLS: Tool[] = [
       properties: {
         session: { type: "string" },
         url: { type: "string" },
+        filter: { type: "array", items: { type: "enum", enum: ["innerText", "userAgent", "statusCode", "cookies", "cookieString", "responseHeaders", "requestHeaders", "ipInfo"] }, description: "Filter the response to only include the specified fields to make the respone shorter and more efficient" },
         keepSamePage: { type: "boolean", description: "Keep the same page before performing the browser actions" },
         cmd: { type: "string", enum: ["request.get", "request.post", "request.put", "request.delete", "request.patch"] },
         browserActions: {
@@ -126,9 +128,9 @@ const TOOLS: Tool[] = [
             },
             required: ["type"]
           }
-        }
-      },
-      required: ["session", "browserActions"]
+          }
+        },
+      required: ["session", "browserActions", "filter"]
     }
   }
 ];
@@ -157,12 +159,8 @@ async function handleToolCall(
       }
 
       case "scrappey_request": {
-        const { url, cmd, session, postData, customHeaders } = args;
-        const params: any = { url };
-        
-        if (session) params.session = session;
-        if (postData) params.postData = postData;
-        if (customHeaders) params.customHeaders = customHeaders;
+        const { url, cmd, session, postData, customHeaders, filter } = args;
+        const params: any = { url, filter, session, postData, customHeaders };
 
         const response = await makeRequest(cmd, params);
         return {
@@ -172,10 +170,11 @@ async function handleToolCall(
       }
 
       case "scrappey_browser_action": {
-        const { session, actions } = args;
+        const { session, browserActions, filter } = args;
         const response = await makeRequest("request.get", {
           session,
-          browserActions: actions
+          browserActions,
+          filter
         });
         return {
           content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
