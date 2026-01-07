@@ -1,24 +1,38 @@
 {
   "name": "scrappey-mcp",
-  "version": "1.0.0",
-  "description": "MCP server implementation for Scrappey",
-  "main": "scrappey-mcp.ts",
+  "version": "2.0.0",
+  "description": "MCP server implementation for Scrappey - Web scraping with antibot bypass, captcha solving, and browser automation",
+  "main": "dist/scrappey-mcp.js",
   "type": "module",
-  "scripts": {
-    "start": "ts-node scrappey-mcp.ts",
-    "build": "tsc"
+  "bin": {
+    "scrappey-mcp": "./dist/scrappey-mcp.js"
   },
+  "scripts": {
+    "start": "node dist/scrappey-mcp.js",
+    "build": "tsc",
+    "dev": "ts-node scrappey-mcp.ts"
+  },
+  "keywords": [
+    "mcp",
+    "scrappey",
+    "web-scraping",
+    "browser-automation",
+    "antibot",
+    "captcha"
+  ],
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.7.0",
-    "axios": "^1.6.7",
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "axios": "^1.7.9",
     "dotenv": "^16.4.7",
     "jsdom": "^26.0.0",
-    "node-html-markdown": "^1.3.0",
-    "typescript": "^5.3.3"
+    "node-html-markdown": "^1.3.0"
   },
   "devDependencies": {
     "@types/jsdom": "^21.1.7",
-    "@types/node": "^20.11.24",
-    "ts-node": "^10.9.2"
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

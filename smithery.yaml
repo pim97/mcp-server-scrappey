@@ -14,6 +14,6 @@ startCommand:
   commandFunction:
     # A JS function that produces the CLI command based on the given config to start the MCP on stdio.
     |-
-    (config) => ({ command: 'node', args: ['dist/index.js'], env: { SCRAPPEY_API_KEY: config.scrappeyApiKey } })
+    (config) => ({ command: 'node', args: ['dist/scrappey-mcp.js'], env: { SCRAPPEY_API_KEY: config.scrappeyApiKey } })
   exampleConfig:
-    scrappeyApiKey: dummy_key_123
+    scrappeyApiKey: your_scrappey_api_key_here
