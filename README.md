@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/pim97-mcp-server-scrappey-badge.png)](https://mseep.ai/app/pim97-mcp-server-scrappey)
+
 # Scrappey MCP Server
 
 A Model Context Protocol (MCP) server for interacting with Scrappey.com's browser-backed web automation and data-extraction capabilities. Try it out directly at [smithery.ai/server/@pim97/mcp-server-scrappey](https://smithery.ai/server/@pim97/mcp-server-scrappey).
