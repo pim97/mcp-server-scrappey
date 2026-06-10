@@ -1,17 +1,19 @@
 # Scrappey MCP Server
 
-A Model Context Protocol (MCP) server for interacting with Scrappey.com's web automation and scraping capabilities. Try it out directly at [smithery.ai/server/@pim97/mcp-server-scrappey](https://smithery.ai/server/@pim97/mcp-server-scrappey).
+A Model Context Protocol (MCP) server for interacting with Scrappey.com's browser-backed web automation and data-extraction capabilities. Try it out directly at [smithery.ai/server/@pim97/mcp-server-scrappey](https://smithery.ai/server/@pim97/mcp-server-scrappey).
 
 ## Overview
 
 This MCP server provides a bridge between AI models and Scrappey's web automation platform, allowing you to:
 - Create and manage browser sessions
-- Send HTTP requests through Scrappey's infrastructure
+- Send HTTP requests through Scrappey's browser-backed infrastructure
 - Execute browser actions (clicking, typing, scrolling, etc.)
-- Handle various anti-bot protections automatically (Cloudflare, Datadome, Kasada, etc.)
-- Solve captchas automatically (Turnstile, reCAPTCHA, hCaptcha, etc.)
+- Render pages that rely on JavaScript challenge pages from common bot-management systems (Cloudflare, Datadome, Kasada, etc.)
+- Complete interactive challenge widgets when a page requires them (Turnstile, reCAPTCHA, hCaptcha, etc.)
 - Take screenshots and record videos
 - Intercept network requests
+
+This server is intended for legitimate development use — application and integration testing, monitoring your own services, and collecting data you are authorized to access. See [Responsible Use](#responsible-use).
 
 ## Setup
 
@@ -47,6 +49,42 @@ Add to your `claude_desktop_config.json`:
   }
 }
 ```
+
+### Cursor IDE Configuration
+
+Cursor supports MCP servers through its settings. Configure it in one of these ways:
+
+**Option 1: Via Cursor Settings UI**
+1. Open Cursor Settings (Ctrl+, or Cmd+,)
+2. Search for "MCP" or "Model Context Protocol"
+3. Add a new MCP server with:
+   - **Name**: `scrappey`
+   - **Command**: `node`
+   - **Args**: `["C:\\Users\\pim_d\\Desktop\\scrappey.com\\mcp-smith\\mcp-server-scrappey\\dist\\scrappey-mcp.js"]`
+   - **Environment Variables**: Add `SCRAPPEY_API_KEY` with your API key
+
+**Option 2: Via Settings JSON**
+1. Open Cursor Settings (Ctrl+Shift+P or Cmd+Shift+P)
+2. Type "Preferences: Open User Settings (JSON)"
+3. Add the MCP server configuration:
+
+```json
+{
+  "mcp.servers": {
+    "scrappey": {
+      "command": "node",
+      "args": ["C:\\Users\\pim_d\\Desktop\\scrappey.com\\mcp-smith\\mcp-server-scrappey\\dist\\scrappey-mcp.js"],
+      "env": {
+        "SCRAPPEY_API_KEY": "your_api_key_here"
+      }
+    }
+  }
+}
+```
+
+**Note**: Adjust the path to `dist/scrappey-mcp.js` based on where you installed the MCP server.
+
+After configuration, restart Cursor to load the MCP server. You should see Scrappey tools available in the AI chat interface.
 
 ## Available Tools
 
@@ -99,7 +137,7 @@ Check if a specific session is currently active.
 ```
 
 ### 5. Send Request (`scrappey_request`)
-Send HTTP requests with antibot bypass capabilities.
+Send browser-backed HTTP requests, with automatic handling of JavaScript challenge pages.
 
 ```json
 {
@@ -171,7 +209,7 @@ Execute browser automation actions.
 | `solve_captcha` | Solve various captcha types |
 | `remove_iframes` | Remove all iframes from page |
 
-#### Supported Captcha Types:
+#### Supported Interactive Challenge Types:
 
 - `turnstile` - Cloudflare Turnstile
 - `recaptcha` / `recaptchav2` / `recaptchav3` - Google reCAPTCHA
@@ -198,18 +236,18 @@ Take a screenshot of a webpage.
 }
 ```
 
-## Antibot Bypass
+## Challenge-Page Handling
 
-The server automatically handles various protection systems:
+Many sites serve JavaScript challenge pages before returning content. Scrappey renders these in a real browser so your automated requests receive the final page. The server is compatible with challenge pages from common bot-management systems:
 
 - **Cloudflare** - Bot Management, Turnstile, Challenge pages
-- **Datadome** - Advanced bot detection
-- **PerimeterX** - Behavioral analysis
-- **Kasada** - Fingerprinting and challenges
+- **Datadome**
+- **PerimeterX**
+- **Kasada**
 - **Akamai** - Bot Manager
-- **Incapsula** - Imperva security
+- **Incapsula** - Imperva
 
-Enable specific bypasses:
+Enable handling for a specific system per request:
 ```json
 {
   "cloudflareBypass": true,
@@ -217,6 +255,8 @@ Enable specific bypasses:
   "kasadaBypass": true
 }
 ```
+
+> The option keys above (`cloudflareBypass`, etc.) are Scrappey API field names and are kept as-is for compatibility.
 
 ## Proxy Options
 
@@ -291,10 +331,19 @@ The server provides detailed error information:
 
 1. **Reuse sessions** for related requests to maintain state
 2. **Destroy sessions** when done to free resources
-3. **Use premium proxies** for better success rates on protected sites
-4. **Enable automatic captcha solving** for sites with challenges
-5. **Use appropriate wait times** between actions for human-like behavior
+3. **Use premium proxies** for more reliable connections
+4. **Enable automatic challenge handling** for sites that serve challenge pages
+5. **Use appropriate wait times** between actions so pages have time to load
 6. **Monitor session limits** to avoid hitting limits
+
+## Responsible Use
+
+This server is a development tool for browser-based automation and data extraction. Use it only for lawful, authorized purposes, such as:
+
+- Testing and monitoring applications and integrations you own or operate
+- Collecting data you are permitted to access
+
+When accessing third-party sites, follow each site's terms of service, robots directives, and rate limits, respect personal data and copyright, and comply with all applicable laws. You are responsible for how you use this server and your Scrappey account.
 
 ## Deployment
 

@@ -168,36 +168,36 @@ const proxyProperties = {
   },
 };
 
-// Common schema properties for antibot bypass
+// Common schema properties for challenge-page handling
 const antibotProperties = {
-  cloudflareBypass: { 
-    type: "boolean", 
-    description: "Enable Cloudflare-specific bypass" 
+  cloudflareBypass: {
+    type: "boolean",
+    description: "Enable Cloudflare challenge-page handling so the request renders correctly"
   },
-  datadomeBypass: { 
-    type: "boolean", 
-    description: "Enable Datadome bypass using specialized solver" 
+  datadomeBypass: {
+    type: "boolean",
+    description: "Enable Datadome challenge handling for this request"
   },
-  kasadaBypass: { 
-    type: "boolean", 
-    description: "Enable Kasada bypass" 
+  kasadaBypass: {
+    type: "boolean",
+    description: "Enable Kasada challenge handling for this request"
   },
-  disableAntiBot: { 
-    type: "boolean", 
-    description: "Disable automatic antibot detection" 
+  disableAntiBot: {
+    type: "boolean",
+    description: "Disable automatic challenge-page handling"
   },
 };
 
-// Common schema properties for captcha solving
+// Common schema properties for interactive challenge handling
 const captchaProperties = {
-  automaticallySolveCaptchas: { 
-    type: "boolean", 
-    description: "Automatically detect and solve captchas on the page" 
+  automaticallySolveCaptchas: {
+    type: "boolean",
+    description: "Automatically complete interactive challenges encountered on the page"
   },
-  alwaysLoad: { 
-    type: "array", 
+  alwaysLoad: {
+    type: "array",
     items: { type: "string" },
-    description: "Always load specific captcha types: 'recaptcha', 'hcaptcha', 'turnstile'" 
+    description: "Always load specific challenge widgets: 'recaptcha', 'hcaptcha', 'turnstile'"
   },
 };
 
@@ -539,7 +539,7 @@ const TOOLS: Tool[] = [
   },
   {
     name: "scrappey_request",
-    description: "Send an HTTP request using Scrappey with antibot bypass capabilities. Supports GET, POST, PUT, DELETE, PATCH methods.",
+    description: "Send an HTTP request through Scrappey's browser-backed infrastructure, with automatic handling of JavaScript challenge pages. Supports GET, POST, PUT, DELETE, PATCH methods.",
     inputSchema: {
       type: "object",
       properties: {
@@ -566,7 +566,7 @@ const TOOLS: Tool[] = [
   },
   {
     name: "scrappey_browser_action",
-    description: "Execute browser automation actions in a session. Supports clicking, typing, scrolling, waiting, JavaScript execution, captcha solving, and more.",
+    description: "Execute browser automation actions in a session. Supports clicking, typing, scrolling, waiting, JavaScript execution, interactive challenge handling, and more.",
     inputSchema: {
       type: "object",
       properties: {
@@ -589,7 +589,7 @@ const TOOLS: Tool[] = [
         ...interceptionProperties,
         mouseMovements: {
           type: "boolean",
-          description: "Enable human-like mouse movements"
+          description: "Enable mouse movement simulation during browser actions"
         },
         forceMouseMovement: {
           type: "boolean",

@@ -1,7 +1,7 @@
 {
   "name": "scrappey-mcp",
   "version": "2.0.0",
-  "description": "MCP server implementation for Scrappey - Web scraping with antibot bypass, captcha solving, and browser automation",
+  "description": "MCP server implementation for Scrappey - browser-backed web automation, data extraction, and challenge-page handling",
   "main": "dist/scrappey-mcp.js",
   "type": "module",
   "bin": {
@@ -15,10 +15,10 @@
   "keywords": [
     "mcp",
     "scrappey",
-    "web-scraping",
+    "web-automation",
     "browser-automation",
-    "antibot",
-    "captcha"
+    "data-extraction",
+    "web-scraping"
   ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",
